@@ -1,51 +1,564 @@
-<body>
-	<div>
-		<p id="intro">Predict your sustainabilitiy in present location by using the form below. click the Predict button to display your Safety Check result.</p>
-		<form action="{{ url_for('weather_data') }}" method="post" >
-			<fieldset>
-			<legend>Asthma Risk Prediction</legend>
-                <label for="city">Enter City:</label>
-				<input type="text" name="city" value={{city_}} id="city" ></input>
-				<br><br>
-                <input type="submit" name="Fetch" value="Fetch weather data"></input>
-                <br>
-				<label for="temperature">Temperature:</label>
-				<input type="text" name="temperature" value= {{temperature}} id="temperature" readonly="readonly"></input>
-				<br><br>
-                <label for="hum">Humidity:</label>
-				<input type="text" name="hum" value= {{humidity}} id="hum" readonly="readonly"></input>
-				<br><br>
-                <label for="pm2.5">PM 2.5:</label>
-				<input type="text" name="pm2.5" value= {{pm2_}} id="pm2.5" readonly="readonly"></input>
-				<br><br>
-				<label for="pm10">PM 10:</label>
-				<input type="text" name="pm10" value= {{pm10_}} id="pm10" readonly="readonly"></input>
-				<br><br>
-			</fieldset>
-		</form>
-		<form action="{{ url_for('predict') }}" method="post">
-			<fieldset>
-                <label for="gender">Enter Gender (1-Male/0-Female):</label>
-				<input type="text" name="gender" value={{gender_}} id="gender"></input>
-				<br><br>
-                <input type="submit" name="Predict" value="Predict" ></input>
-                <br><br>
-                <label for="predicted_pefr">Predicted PEFR:</label>
-				<input type="text" name="predicted_pefr" value={{predicted_pefr_}} id="predicted_pefr" readonly="readonly"></input>
-				<br><br>
-			</fieldset>
-		</form>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asthma Risk Prediction</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --bg: #0b1120;
+            --surface: #1a2332;
+            --surface-hover: #243044;
+            --border: #2a3a4e;
+            --border-focus: #3b82f6;
+            --text: #f1f5f9;
+            --text-muted: #8899aa;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --primary-glow: rgba(59,130,246,0.15);
+            --safe: #22c55e;
+            --moderate: #f59e0b;
+            --risk: #ef4444;
+            --radius: 10px;
+            --radius-lg: 14px;
+        }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem 1rem 4rem;
+        }
+        .container { width: 100%; max-width: 640px; }
 
-		<form action="{{ url_for('safety_check') }}" method="post">
-			<fieldset>
-                <label for="actual_pefr">Actual PEFR:</label>
-				<input type="text" name="actual_pefr" value={{actual_pefr_}} id="actual_pefr"></input>
-				<br><br>
-                <input type="submit" name="check" value="Check safety" ></input>
-                <br><br>
-				<label for="safety" id="safety_label">Your Safety Parameter is:</label>
-				<input type="text" name="safety" value={{safety}} id="safety" readonly="readonly"></input>
-			</fieldset>
-		</form>
-	</div>
+        /* Header */
+        header { text-align: center; margin-bottom: 2rem; }
+        header .logo {
+            display: inline-flex; align-items: center; gap: 0.6rem;
+            margin-bottom: 0.75rem;
+        }
+        header .logo svg { width: 36px; height: 36px; }
+        header h1 {
+            font-size: 1.65rem; font-weight: 800;
+            background: linear-gradient(135deg, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            line-height: 1.2;
+        }
+        header p { color: var(--text-muted); font-size: 0.9rem; margin-top: 0.3rem; }
+        .header-badge {
+            display: inline-block;
+            background: var(--primary-glow);
+            border: 1px solid rgba(59,130,246,0.25);
+            color: #93bbfc;
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 0.2rem 0.7rem;
+            border-radius: 100px;
+            margin-top: 0.5rem;
+            letter-spacing: 0.3px;
+        }
+
+        /* Card */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 1.75rem;
+            margin-bottom: 1rem;
+            transition: border-color 0.2s;
+        }
+        .card-title {
+            font-size: 1.05rem; font-weight: 600; margin-bottom: 1.5rem;
+            display: flex; align-items: center; gap: 0.6rem;
+        }
+        .card-title .step {
+            background: var(--primary);
+            color: #fff; width: 26px; height: 26px; border-radius: 50%;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-size: 0.8rem; font-weight: 700; flex-shrink: 0;
+        }
+        .card-subtitle {
+            font-size: 0.8rem; color: var(--text-muted); margin-top: -1rem; margin-bottom: 1.25rem;
+        }
+
+        /* Form */
+        .form-row {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 0 1rem;
+        }
+        .form-group { margin-bottom: 1rem; }
+        .form-group.full { grid-column: 1 / -1; }
+
+        .label-row {
+            display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.35rem;
+        }
+        .label-row label {
+            font-size: 0.82rem; font-weight: 500; color: var(--text-muted);
+            cursor: pointer;
+        }
+
+        .info-btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 16px; height: 16px; border-radius: 50%;
+            background: transparent;
+            border: 1.5px solid var(--text-muted);
+            color: var(--text-muted);
+            font-size: 0.55rem; font-weight: 700; font-style: italic;
+            cursor: help; position: relative; flex-shrink: 0;
+            transition: background 0.2s, border-color 0.2s, color 0.2s;
+            line-height: 1;
+            padding: 0;
+            font-family: 'Georgia', serif;
+        }
+        .info-btn:hover {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+        }
+        .info-btn .tooltip {
+            visibility: hidden; opacity: 0;
+            position: absolute; z-index: 10;
+            bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+            background: #1e293b; color: #e2e8f0;
+            border: 1px solid var(--border);
+            padding: 0.6rem 0.9rem; border-radius: 8px;
+            font-size: 0.75rem; font-weight: 400; font-family: 'Inter', sans-serif;
+            white-space: normal; width: 240px; text-align: left;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            pointer-events: none; transition: opacity 0.15s, visibility 0.15s;
+            font-style: normal;
+        }
+        .info-btn .tooltip::after {
+            content: ''; position: absolute; top: 100%; left: 50%;
+            transform: translateX(-50%);
+            border: 5px solid transparent; border-top-color: var(--border);
+        }
+        .info-btn:hover .tooltip {
+            visibility: visible; opacity: 1;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 0.65rem 0.8rem;
+            background: #0f172a;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 0.9rem;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        input:focus, select:focus {
+            border-color: var(--border-focus);
+            box-shadow: 0 0 0 3px var(--primary-glow);
+        }
+        input::placeholder { color: #475569; }
+        select { appearance: none; cursor: pointer; }
+
+        .btn {
+            width: 100%;
+            padding: 0.8rem;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        .btn:hover { box-shadow: 0 4px 20px rgba(59,130,246,0.3); }
+        .btn:active { transform: scale(0.98); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; transform: none; }
+
+        .spinner {
+            width: 18px; height: 18px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            display: none;
+        }
+        .btn.loading .spinner { display: inline-block; }
+        .btn.loading .btn-text { display: none; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .error-box {
+            display: none;
+            background: rgba(239,68,68,0.08);
+            border: 1px solid rgba(239,68,68,0.25);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            color: #fca5a5;
+            font-size: 0.85rem;
+            margin-top: 1rem;
+        }
+        .error-box.visible { display: block; }
+
+        .divider {
+            height: 1px; background: var(--border); margin: 1.25rem 0;
+        }
+
+        /* Results */
+        .results { display: none; }
+        .results.visible { display: block; animation: fadeUp 0.35s ease; }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-header {
+            text-align: center; margin-bottom: 1.25rem;
+        }
+        .zone-badge {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            padding: 0.55rem 1.5rem; border-radius: 100px;
+            font-weight: 700; font-size: 1.15rem; letter-spacing: 0.5px;
+        }
+        .zone-badge.safe { background: rgba(34,197,94,0.12); color: var(--safe); }
+        .zone-badge.moderate { background: rgba(245,158,11,0.12); color: var(--moderate); }
+        .zone-badge.risk { background: rgba(239,68,68,0.12); color: var(--risk); }
+        .result-header .city-sub {
+            font-size: 0.8rem; color: var(--text-muted); margin-top: 0.4rem;
+        }
+
+        .section-label {
+            font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 0.8px; color: var(--text-muted); margin-bottom: 0.75rem;
+        }
+
+        .weather-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem;
+            margin-bottom: 1.25rem;
+        }
+        .weather-item {
+            background: #0f172a; border-radius: 8px;
+            padding: 0.7rem; text-align: center;
+        }
+        .weather-item .value { font-size: 1.2rem; font-weight: 700; }
+        .weather-item .label { font-size: 0.7rem; color: var(--text-muted); margin-top: 0.15rem; }
+
+        .result-table { width: 100%; }
+        .result-table tr:not(:last-child) td {
+            padding: 0.55rem 0;
+            border-bottom: 1px solid rgba(42,58,78,0.5);
+        }
+        .result-table td:last-child { text-align: right; font-weight: 600; }
+        .result-table td:first-child { color: var(--text-muted); font-size: 0.88rem; }
+
+        .ratio-bar-wrap {
+            margin: 1rem 0 0.5rem;
+            background: #0f172a; border-radius: 100px; height: 8px; overflow: hidden;
+        }
+        .ratio-bar {
+            height: 100%; border-radius: 100px; transition: width 0.6s ease;
+        }
+        .ratio-bar.safe { background: var(--safe); }
+        .ratio-bar.moderate { background: var(--moderate); }
+        .ratio-bar.risk { background: var(--risk); }
+
+        .footer-note {
+            text-align: center; font-size: 0.78rem; color: var(--text-muted);
+            padding: 1.5rem 0 0;
+        }
+        .footer-note a { color: var(--primary); text-decoration: none; }
+        .footer-note a:hover { text-decoration: underline; }
+
+        @media (max-width: 520px) {
+            body { padding: 1rem 0.75rem 3rem; }
+            .card { padding: 1.25rem; }
+            header h1 { font-size: 1.3rem; }
+            .form-row { grid-template-columns: 1fr; gap: 0; }
+            .weather-grid { gap: 0.4rem; }
+            .weather-item .value { font-size: 1rem; }
+            .info-btn .tooltip { width: 200px; left: -80px; }
+            .info-btn .tooltip::after { left: 88px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <svg viewBox="0 0 36 36" fill="none">
+                    <circle cx="18" cy="18" r="16" stroke="#3b82f6" stroke-width="2.5" opacity="0.3"/>
+                    <path d="M18 8C18 8 22 14 22 18C22 22 20 24 18 24C16 24 14 22 14 18C14 14 18 8 18 8Z" fill="#3b82f6" opacity="0.8"/>
+                    <path d="M18 12L18 20" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+                    <path d="M14 16L22 16" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+                <h1>Asthma Risk Prediction</h1>
+            </div>
+            <p>Assess your respiratory risk using environmental &amp; personal health data</p>
+            <span class="header-badge">v2.0 &middot; Random Forest Regressor</span>
+        </header>
+
+        <div class="card">
+            <div class="card-title"><span class="step">1</span>Personal Information</div>
+            <div class="card-subtitle">Enter your demographic details and health factors</div>
+
+            <form id="predictForm" autocomplete="off">
+                <div class="form-row">
+                    <div class="form-group">
+                        <div class="label-row">
+                            <label for="city">City</label>
+                            <span class="info-btn">i
+                                <span class="tooltip">Any city worldwide. Uses Open-Meteo API for real-time weather &amp; AQI data. Select from suggestions or type your own.</span>
+                            </span>
+                        </div>
+                        <input type="text" id="city" list="cityList" placeholder="Type or select a city" required>
+                        <datalist id="cityList">
+                            <option value="chennai"><option value="coimbatore"><option value="madurai">
+                            <option value="tiruchirappalli"><option value="salem"><option value="tirunelveli">
+                            <option value="tiruppur"><option value="erode"><option value="vellore">
+                            <option value="thoothukudi"><option value="dindigul"><option value="thanjavur">
+                            <option value="ranipet"><option value="sivakasi"><option value="karur">
+                            <option value="udhagamandalam"><option value="hosur"><option value="nagercoil">
+                            <option value="kumbakonam"><option value="cuddalore"><option value="kanyakumari">
+                            <option value="ambur"><option value="nagapattinam"><option value="bengaluru">
+                            <option value="hyderabad"><option value="mumbai"><option value="pune">
+                            <option value="delhi"><option value="kolkata"><option value="ahmedabad">
+                            <option value="jaipur"><option value="lucknow"><option value="surat">
+                            <option value="--- International cities ---"><option value="london">
+                            <option value="new york"><option value="tokyo"><option value="paris">
+                            <option value="berlin"><option value="sydney"><option value="dubai">
+                            <option value="singapore"><option value="bangkok"><option value="kuala lumpur">
+                            <option value="dhaka"><option value="colombo"><option value="kathmandu">
+                        </datalist>
+                    </div>
+                    <div class="form-group">
+                        <div class="label-row">
+                            <label for="age">Age</label>
+                            <span class="info-btn">i
+                                <span class="tooltip">Your age in years (12–80). PEFR naturally declines with age.</span>
+                            </span>
+                        </div>
+                        <input type="number" id="age" placeholder="e.g. 25" min="1" max="120" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <div class="label-row">
+                            <label for="height">Height (cm)</label>
+                            <span class="info-btn">i
+                                <span class="tooltip">Your height in centimetres (100–250). Taller individuals typically have higher PEFR.</span>
+                            </span>
+                        </div>
+                        <input type="number" id="height" placeholder="e.g. 170" min="100" max="250" required>
+                    </div>
+                    <div class="form-group">
+                        <div class="label-row">
+                            <label for="gender">Gender</label>
+                            <span class="info-btn">i
+                                <span class="tooltip">Biological sex. Males generally have ~30% higher PEFR than females of the same age/height.</span>
+                            </span>
+                        </div>
+                        <select id="gender" required>
+                            <option value="">Select</option>
+                            <option value="1">Male</option>
+                            <option value="0">Female</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <div class="label-row">
+                            <label for="smoking">Smoking</label>
+                            <span class="info-btn">i
+                                <span class="tooltip">Current smoker? Smoking reduces lung function and PEFR by 10–20% on average.</span>
+                            </span>
+                        </div>
+                        <select id="smoking" required>
+                            <option value="">Select</option>
+                            <option value="0">Non-Smoker</option>
+                            <option value="1">Smoker</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <div class="label-row">
+                            <label for="asthma">Asthma History</label>
+                            <span class="info-btn">i
+                                <span class="tooltip">Have you been diagnosed with asthma? Asthmatic individuals tend to have lower baseline PEFR.</span>
+                            </span>
+                        </div>
+                        <select id="asthma" required>
+                            <option value="">Select</option>
+                            <option value="0">No</option>
+                            <option value="1">Yes</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group full">
+                        <div class="label-row">
+                            <label for="pefr">Actual PEFR (L/min)</label>
+                            <span class="info-btn">i
+                                <span class="tooltip">Peak Expiratory Flow Rate measured with a peak flow meter. Normal range: 250–700 L/min. Take the best of 3 attempts.</span>
+                            </span>
+                        </div>
+                        <input type="number" id="pefr" placeholder="e.g. 450" min="1" max="1000" required>
+                    </div>
+                </div>
+
+                <div class="divider"></div>
+
+                <button type="submit" class="btn" id="predictBtn">
+                    <span class="btn-text">Analyze Risk</span>
+                    <span class="spinner"></span>
+                </button>
+            </form>
+
+            <div class="error-box" id="errorBox"></div>
+        </div>
+
+        <!-- Results -->
+        <div class="results" id="results">
+            <div class="card">
+                <div class="result-header">
+                    <div class="zone-badge" id="zoneBadge">SAFE</div>
+                    <div class="city-sub" id="resultCity"></div>
+                </div>
+
+                <div class="section-label">Environmental Conditions</div>
+                <div class="weather-grid" id="weatherGrid">
+                    <div class="weather-item"><div class="value" id="resTemp">-</div><div class="label">Temperature</div></div>
+                    <div class="weather-item"><div class="value" id="resHum">-</div><div class="label">Humidity</div></div>
+                    <div class="weather-item"><div class="value" id="resPM25">-</div><div class="label">PM 2.5 (&mu;g/m&sup3;)</div></div>
+                    <div class="weather-item"><div class="value" id="resPM10">-</div><div class="label">PM 10 (&mu;g/m&sup3;)</div></div>
+                </div>
+
+                <div class="section-label">Assessment</div>
+                <table class="result-table">
+                    <tr><td>Predicted PEFR</td><td id="resPredicted">- L/min</td></tr>
+                    <tr><td>Your Actual PEFR</td><td id="resActual">- L/min</td></tr>
+                    <tr><td>PEFR Ratio</td><td id="resRatio">- %</td></tr>
+                    <tr><td>Age</td><td id="resAge">-</td></tr>
+                    <tr><td>Height</td><td id="resHeight">-</td></tr>
+                    <tr><td>Gender</td><td id="resGender">-</td></tr>
+                    <tr><td>Smoking</td><td id="resSmoking">-</td></tr>
+                    <tr><td>Asthma History</td><td id="resAsthma">-</td></tr>
+                </table>
+
+                <div class="ratio-bar-wrap">
+                    <div class="ratio-bar" id="ratioBar" style="width:0%"></div>
+                </div>
+
+                <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:var(--text-muted);">
+                    <span>0%</span>
+                    <span>50% (Moderate threshold)</span>
+                    <span>80% (Safe threshold)</span>
+                    <span>100%</span>
+                </div>
+            </div>
+
+            <div class="footer-note">
+                Model: Random Forest Regressor &middot; Trained on 5,000 records &middot;
+                <a href="#" onclick="document.getElementById('predictForm').scrollIntoView({behavior:'smooth'});return false">New Prediction</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            const form = document.getElementById('predictForm');
+            const btn = document.getElementById('predictBtn');
+            const errorBox = document.getElementById('errorBox');
+            const results = document.getElementById('results');
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                errorBox.classList.remove('visible');
+                results.classList.remove('visible');
+                btn.classList.add('loading');
+                btn.disabled = true;
+
+                const payload = {
+                    city: document.getElementById('city').value.trim(),
+                    age: document.getElementById('age').value.trim(),
+                    height: document.getElementById('height').value.trim(),
+                    gender: document.getElementById('gender').value,
+                    smoking: document.getElementById('smoking').value,
+                    asthma: document.getElementById('asthma').value,
+                    actual_pefr: document.getElementById('pefr').value.trim(),
+                };
+
+                try {
+                    const res = await fetch('/api/predict', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const json = await res.json();
+
+                    if (!json.success) {
+                        showError(json.error || 'Prediction failed');
+                        return;
+                    }
+                    displayResults(json.data);
+                } catch (err) {
+                    const msg = err.message || '';
+                    if (msg.includes('Failed to fetch')) {
+                        showError('Cannot reach the Flask server. Open a terminal in myapp/ and run:  python3 app.py');
+                    } else {
+                        showError('Connection error: ' + msg);
+                    }
+                } finally {
+                    btn.classList.remove('loading');
+                    btn.disabled = false;
+                }
+            });
+
+            function showError(msg) {
+                errorBox.textContent = msg;
+                errorBox.classList.add('visible');
+            }
+
+            function displayResults(d) {
+                const zone = d.result.zone.toLowerCase();
+                const badge = document.getElementById('zoneBadge');
+                badge.textContent = d.result.zone;
+                badge.className = 'zone-badge ' + zone;
+
+                const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+                document.getElementById('resultCity').innerHTML = cap(d.city) + ' &middot; ' + d.user.gender;
+
+                document.getElementById('resTemp').innerHTML = d.environment.temperature + '&deg;C';
+                document.getElementById('resHum').textContent = d.environment.humidity + '%';
+                document.getElementById('resPM25').textContent = d.environment.pm25;
+                document.getElementById('resPM10').textContent = d.environment.pm10;
+
+                document.getElementById('resPredicted').textContent = d.result.predicted_pefr + ' L/min';
+                document.getElementById('resActual').textContent = d.user.actual_pefr + ' L/min';
+                document.getElementById('resRatio').textContent = d.result.ratio + '%';
+                document.getElementById('resAge').textContent = d.user.age + ' years';
+                document.getElementById('resHeight').textContent = d.user.height + ' cm';
+                document.getElementById('resGender').textContent = d.user.gender;
+                document.getElementById('resSmoking').textContent = d.user.smoking;
+                document.getElementById('resAsthma').textContent = d.user.asthma_history;
+
+                const bar = document.getElementById('ratioBar');
+                const pct = Math.min(d.result.ratio, 100);
+                bar.style.width = pct + '%';
+                bar.className = 'ratio-bar ' + zone;
+
+                results.classList.add('visible');
+                setTimeout(() => results.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+            }
+        })();
+    </script>
 </body>
+</html>
