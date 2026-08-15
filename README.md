@@ -77,7 +77,7 @@ Flask API  ──►  weather_data.py  ──►  Weather API (Open-Meteo / IQAi
 
 ```bash
 git clone <repo-url>
-cd Asthma-Risk-Prediction-using-Decision-Tree/myapp
+cd asthma_risk_prediction/myapp
 pip install -r requirements.txt
 python3 app.py
 ```
