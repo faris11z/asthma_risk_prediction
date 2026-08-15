@@ -1,6 +1,6 @@
 # Asthma Risk Prediction using Random Forest Regressor
 
-> **v2.0** — Major upgrade from the original Decision Tree Classifier project by Sulaiman Faris, Jayapriyan, and Hariharan.
+> **v2.0** — Major upgrade from the original Decision Tree Classifier project by Sulaiman Faris.
 
 A web-based application that predicts asthma risk by comparing your actual Peak Expiratory Flow Rate (PEFR) against a predicted healthy baseline for your demographic profile and current environmental conditions.
 
@@ -35,15 +35,19 @@ A web-based application that predicts asthma risk by comparing your actual Peak 
 
 ```
 myapp/
-├── app.py                 # Flask web server & JSON API
-├── weather_data.py        # ML model, weather fetching, prediction logic
-├── PEFR_Data_Set.csv      # Training dataset (5,000 rows)
-├── PEFR_predictor.joblib  # Serialised trained model
+├── app.py                  # Flask web server & JSON API (orchestration)
+├── weather_data.py         # Weather fetching only (Open-Meteo / IQAir / fallback)
+├── model_training.py       # Random Forest training, caching, prediction helper
+├── model_evaluation.py     # Metrics: holdout, 5-fold CV, subgroup errors
+├── model_visualization.py  # Matplotlib plots → eval_plots/
+├── evaluate.py             # Runnable: retrain + evaluate + visualize (python3 evaluate.py)
+├── PEFR_Data_Set.csv       # Training dataset (5,000 rows)
+├── PEFR_predictor.joblib   # Serialised trained model
+├── eval_plots/             # Generated evaluation charts
 ├── templates/
-│   └── index.html         # Frontend (single-page app)
-├── web/                   # Legacy v1.0 Eel-based frontend
-├── requirements.txt       # Python dependencies
-└── Asthma Risk Prediction.py  # Legacy v1.0 notebook
+│   └── index.html          # Frontend (single-page app)
+├── web/                    # Legacy v1.0 Eel-based frontend
+└── requirements.txt        # Python dependencies
 ```
 
 ### Data flow
@@ -132,16 +136,69 @@ Returns dataset row count, feature names, target column, and training status.
 - **Features**: Age, Height, Gender, Smoking, AsthmaHistory, Temperature, Humidity, PM2.5, PM10
 - **Target**: PEFR (Peak Expiratory Flow Rate in L/min)
 - **Training data**: 5,000 synthetically generated records based on standard respiratory physiology
-- **Hyperparameters**: `n_estimators=100`, `max_depth=15`, `min_samples_leaf=5`
+- **Hyperparameters**: tuned via `GridSearchCV` — `n_estimators=200`, `max_depth=10`, `min_samples_leaf=5`, `min_samples_split=2`
+- **Evaluation**: run `python3 evaluate.py` (retrains fresh, retunes hyperparameters, regenerates all reports & plots). Add `--fast` for a quick run with a smaller grid.
+
+### Evaluation pipeline: train / validation / test split
+
+```
+Dataset (5,000)
+   ├── Train (70% = 3,500)      ──► GridSearchCV (5-fold) finds best hyperparameters
+   ├── Validation (15% = 750)   ──► sanity check against overfitting
+   └── Test (15% = 750, unused during tuning)  ──► final honest metrics
+```
 
 ### Performance comparison
 
 | Model | MAE (L/min) | R² | 
 |---|---|---|
-| DecisionTreeClassifier | 51.2 | 0.50 |
-| DecisionTreeRegressor | 40.4 | 0.69 |
-| **RandomForestRegressor** | **34.2** | **0.78** |
-| GradientBoostingRegressor | 33.6 | 0.79 |
+| DecisionTreeRegressor | 40.61 | 0.69 |
+| RandomForestRegressor (default) | 34.25 | 0.78 |
+| **RandomForestRegressor (tuned)** | **34.00** | **0.78** |
+| GradientBoostingRegressor | 33.64 | 0.78 |
+
+### Evaluation metrics
+
+| Metric | Test set (untouched) | 5-fold CV (best params) |
+|---|---|---|
+| MAE | 34.93 L/min | 34.00 ± 0.63 L/min |
+| RMSE | 44.32 L/min | 42.73 ± 0.90 L/min |
+| R² | 0.77 | 0.7786 ± 0.0119 |
+| MAPE | 7.19% | — |
+| Explained Variance | 0.77 | — |
+
+Overfitting check: validation MAE 33.73 vs CV-train MAE 34.02 → gap 0.29 L/min, no overfitting.
+
+### Feature importance
+
+| Feature | Importance |
+|---|---|
+| Gender | 0.678 |
+| Height | 0.096 |
+| Age | 0.068 |
+| Smoking | 0.061 |
+| Temperature | 0.024 |
+| Humidity | 0.022 |
+| PM2.5 | 0.017 |
+| PM10 | 0.017 |
+| Asthma History | 0.017 |
+
+### Key trends (from evaluation)
+
+- **Tuning paid off**: GridSearchCV (36 combos × 5 folds) improved CV MAE from 34.25 → 34.00 L/min (best: `max_depth=10`, 200 trees).
+- **Gender dominates** (68% importance) — expected, males average 580 vs 439 L/min for females in the dataset.
+- **Physiological factors** (Gender + Height + Age ≈ 84%) drive the prediction far more than environmental ones — consistent with medical literature where PEFR depends primarily on age, height and sex.
+- **Asthmatics are harder to predict**: MAE 40.3 vs 33.8 L/min for non-asthmatics — a larger asthmatic cohort would improve this.
+- **Mid-PEFR band is the hardest to predict** (MAE 38.5), while high-PEFR is easiest (30.8) — regression toward the mean in the middle range.
+- **Mean residual ≈ −1.1 L/min** → essentially zero systematic bias; errors are random.
+
+### Visualizations (`eval_plots/`)
+
+| Plot | What it shows |
+|---|---|
+| `feature_importance.png` | Horizontal bar chart ranking the 9 features |
+| `pred_vs_actual.png` | Scatter of predictions hugging the y=x line |
+| `residuals.png` | Residual histogram + heteroscedasticity check |
 
 ### PEFR reference formula
 
@@ -210,8 +267,3 @@ This transforms the app from a **city-level screener** into a **personal indoor 
 ## License
 
 MIT
-
-## Contact
-
-- Sulaiman Faris — sulaiman11faris@gmail.com
-- Jayapriyan — jayapriyan11802@gmail.com

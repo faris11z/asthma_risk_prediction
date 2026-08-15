@@ -1,18 +1,6 @@
-import pandas as pd
-from sklearn.ensemble import RandomForestRegressor
-import joblib
-import os
 import requests
 from bs4 import BeautifulSoup
 import re
-
-DATA_PATH = os.path.join(os.path.dirname(__file__), 'PEFR_Data_Set.csv')
-MODEL_PATH = os.path.join(os.path.dirname(__file__), 'PEFR_predictor.joblib')
-
-FEATURE_NAMES = ['Age', 'Height', 'Gender', 'Smoking', 'AsthmaHistory',
-                 'Outdoor Temperature', 'Humidity', 'PM 2.5', 'PM 10']
-
-TARGET = 'PEFR'
 
 CITY_COORDS = {
     'chennai':       (13.08, 80.27),
@@ -83,30 +71,6 @@ CITY_COORDS = {
     'lagos':         (6.52, 3.38),
     'nairobi':       (-1.29, 36.82),
 }
-
-def _train_model():
-    data = pd.read_csv(DATA_PATH)
-    X = data[FEATURE_NAMES].values
-    y = data[TARGET].values
-    model = RandomForestRegressor(n_estimators=100, max_depth=15, min_samples_leaf=5, random_state=42, n_jobs=-1)
-    model.fit(X, y)
-    joblib.dump(model, MODEL_PATH)
-    print(f"RandomForestRegressor trained on {len(data)} records with {len(FEATURE_NAMES)} features")
-    return model
-
-def get_model():
-    if os.path.exists(MODEL_PATH):
-        return joblib.load(MODEL_PATH)
-    return _train_model()
-
-def get_model_info():
-    data = pd.read_csv(DATA_PATH)
-    return {
-        'rows': len(data),
-        'features': FEATURE_NAMES,
-        'target': TARGET,
-        'trained': os.path.exists(MODEL_PATH)
-    }
 
 def _scrape_iqair(city):
     url = f'https://www.iqair.com/in-en/india/tamil-nadu/{city}'
@@ -190,50 +154,3 @@ def get_weather(city):
     except Exception:
         pass
     return _generate_fallback(city)
-
-def predict(data):
-    city = data['city'].strip().lower()
-    age = int(data['age'])
-    height = int(data['height'])
-    gender = int(data['gender'])
-    smoking = int(data['smoking'])
-    asthma = int(data['asthma'])
-    actual_pefr = float(data['actual_pefr'])
-
-    temp, hum, pm2, pm10 = get_weather(city)
-
-    features = [[age, height, gender, smoking, asthma, temp, hum, pm2, pm10]]
-    model = get_model()
-    predicted_pefr = float(model.predict(features)[0])
-
-    ratio = (actual_pefr / predicted_pefr) * 100
-
-    if ratio >= 80:
-        zone = 'SAFE'
-    elif ratio >= 50:
-        zone = 'MODERATE'
-    else:
-        zone = 'RISK'
-
-    return {
-        'city': city,
-        'user': {
-            'age': age,
-            'height': height,
-            'gender': 'Male' if gender == 1 else 'Female',
-            'smoking': 'Yes' if smoking else 'No',
-            'asthma_history': 'Yes' if asthma else 'No',
-            'actual_pefr': actual_pefr,
-        },
-        'environment': {
-            'temperature': temp,
-            'humidity': hum,
-            'pm25': pm2,
-            'pm10': pm10,
-        },
-        'result': {
-            'predicted_pefr': round(predicted_pefr),
-            'ratio': round(ratio, 1),
-            'zone': zone,
-        }
-    }
