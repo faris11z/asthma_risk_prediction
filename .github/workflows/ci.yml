@@ -21,23 +21,19 @@ jobs:
 
       - name: Install dependencies
         run: pip install -r requirements.txt
-        working-directory: myapp
 
       - name: Run evaluation pipeline
         run: python3 evaluate.py --fast
-        working-directory: myapp
 
       - name: Verify model was regenerated
         run: test -f PEFR_predictor.joblib && echo "Model file exists" || (echo "Model file missing!" && exit 1)
-        working-directory: myapp
 
       - name: Verify plots were generated
         run: |
-          test -f eval_plots/feature_importance.png || (echo "feature_importance.png missing!" && exit 1)
-          test -f eval_plots/pred_vs_actual.png    || (echo "pred_vs_actual.png missing!" && exit 1)
-          test -f eval_plots/residuals.png         || (echo "residuals.png missing!" && exit 1)
+          test -f myapp/eval_plots/feature_importance.png || (echo "feature_importance.png missing!" && exit 1)
+          test -f myapp/eval_plots/pred_vs_actual.png    || (echo "pred_vs_actual.png missing!" && exit 1)
+          test -f myapp/eval_plots/residuals.png         || (echo "residuals.png missing!" && exit 1)
           echo "All 3 plots verified"
-        working-directory: myapp
 
       - name: Smoke test Gradio app
         run: |
@@ -45,4 +41,3 @@ jobs:
           sleep 5
           curl -sf http://127.0.0.1:7860/ | grep -q "Asthma Risk Prediction" && echo "Smoke test PASSED" || (echo "Smoke test FAILED" && exit 1)
           kill %1
-        working-directory: myapp

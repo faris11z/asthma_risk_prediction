@@ -2,10 +2,10 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY myapp/requirements.txt .
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt gunicorn
 
-COPY myapp/ .
+COPY . .
 
 EXPOSE 7860
 

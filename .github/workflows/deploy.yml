@@ -49,7 +49,7 @@ jobs:
           except Exception as e:
               print(f'Repo note: {e}')
 
-          # Upload files (exclude .git, .github, __pycache__, Dockerfile)
+          # Upload files (exclude .git, .github, __pycache__, Dockerfile, legacy dirs)
           api.upload_folder(
               folder_path='.',
               repo_id=repo_id,
@@ -60,6 +60,9 @@ jobs:
                   '__pycache__/**',
                   '*.pyc',
                   'eval_plots/**',
+                  'myapp/templates/**',
+                  'myapp/web/**',
+                  'myapp/eval_plots/**',
                   'Dockerfile',
                   '.dockerignore',
               ],
