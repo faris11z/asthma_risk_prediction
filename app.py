@@ -1,4 +1,17 @@
 import gradio as gr
+
+try:
+    import spaces
+except ImportError:
+    class _GPU:
+        def __call__(self, fn=None, **kwargs):
+            if fn is not None:
+                return fn
+            def decorator(f):
+                return f
+            return decorator
+    spaces = type('spaces', (), {'GPU': _GPU()})()
+
 from weather_data import get_weather
 from model_training import predict_pefr, get_model_info
 
@@ -19,6 +32,7 @@ CITIES = [
 ]
 
 
+@spaces.GPU(duration=30)
 def predict(city, age, height, gender, smoking, asthma, actual_pefr):
     city = city.strip().lower()
     if not city:
