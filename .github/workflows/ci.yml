@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+        working-directory: myapp
+
+      - name: Run evaluation pipeline
+        run: python3 evaluate.py --fast
+        working-directory: myapp
+
+      - name: Verify model was regenerated
+        run: test -f PEFR_predictor.joblib && echo "Model file exists" || (echo "Model file missing!" && exit 1)
+        working-directory: myapp
+
+      - name: Verify plots were generated
+        run: |
+          test -f eval_plots/feature_importance.png || (echo "feature_importance.png missing!" && exit 1)
+          test -f eval_plots/pred_vs_actual.png    || (echo "pred_vs_actual.png missing!" && exit 1)
+          test -f eval_plots/residuals.png         || (echo "residuals.png missing!" && exit 1)
+          echo "All 3 plots verified"
+        working-directory: myapp
+
+      - name: Smoke test Flask server
+        run: |
+          python3 app.py &
+          sleep 3
+          curl -sf -X POST http://127.0.0.1:5000/api/predict \
+            -H "Content-Type: application/json" \
+            -d '{"city":"chennai","age":"25","height":"170","gender":"1","smoking":"0","asthma":"0","actual_pefr":"450"}' \
+            | python3 -c "import sys,json; d=json.load(sys.stdin); assert d['success'], 'Prediction failed'; print('Smoke test PASSED:', d['data']['result']['zone'])"
+          kill %1
+        working-directory: myapp

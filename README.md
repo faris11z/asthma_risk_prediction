@@ -1,3 +1,14 @@
+---
+title: Asthma Risk Prediction
+emoji: 🫁
+colorFrom: blue
+colorTo: green
+sdk: docker
+sdk_version: "24.0"
+app_port: 7860
+pinned: false
+---
+
 # Asthma Risk Prediction using Random Forest Regressor
 
 > **v2.0** — Major upgrade from the original Decision Tree Classifier project by Sulaiman Faris.

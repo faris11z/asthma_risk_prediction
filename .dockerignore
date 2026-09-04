@@ -1,0 +1,8 @@
+.git
+.github
+__pycache__
+*.pyc
+*.pyo
+eval_plots/
+web/
+asthma-*.jpg
