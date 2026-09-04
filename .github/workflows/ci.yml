@@ -30,9 +30,9 @@ jobs:
 
       - name: Verify plots were generated
         run: |
-          test -f myapp/eval_plots/feature_importance.png || (echo "feature_importance.png missing!" && exit 1)
-          test -f myapp/eval_plots/pred_vs_actual.png    || (echo "pred_vs_actual.png missing!" && exit 1)
-          test -f myapp/eval_plots/residuals.png         || (echo "residuals.png missing!" && exit 1)
+          test -f eval_plots/feature_importance.png || (echo "feature_importance.png missing!" && exit 1)
+          test -f eval_plots/pred_vs_actual.png    || (echo "pred_vs_actual.png missing!" && exit 1)
+          test -f eval_plots/residuals.png         || (echo "residuals.png missing!" && exit 1)
           echo "All 3 plots verified"
 
       - name: Smoke test Gradio app
