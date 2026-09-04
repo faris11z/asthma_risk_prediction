@@ -25,7 +25,7 @@ A web-based application that predicts asthma risk by comparing your actual Peak 
 | **Model** | DecisionTreeClassifier | RandomForestRegressor (100 trees) |
 | **Model accuracy** | R² = 0.50, MAE = 51.2 L/min | R² = 0.78, MAE = 34.2 L/min |
 | **Input features** | Gender only | Age, Height, Gender, Smoking, Asthma History |
-| **API** | Form-based (Flask templates) | JSON API (`/api/predict`) |
+| **API** | Form-based (Flask templates) | Gradio web interface (live on Hugging Face Spaces) |
 | **Frontend** | Broken multi-form layout | Single-page app, dark theme, tooltips, responsive |
 | **Weather source** | IQAir only (India) | Open-Meteo (global) + IQAir + fallback |
 | **City scope** | Tamil Nadu only | Worldwide (60+ cities pre-configured) |
@@ -58,7 +58,7 @@ A web-based application that predicts asthma risk by comparing your actual Peak 
 ├── web/                    # Legacy v1.0 Eel-based frontend
 ├── eval_plots/             # Generated evaluation charts
 ├── Dockerfile              # Optional Docker build (for Render/self-host)
-└── .github/workflows/      # CI/CD pipelines
+└── .github/workflows/      # CI/CD pipelines (CI + deploy to HF Spaces)
 ```
 
 ### Data flow
@@ -67,7 +67,7 @@ A web-based application that predicts asthma risk by comparing your actual Peak 
 User inputs (age, height, gender, smoking, asthma, actual PEFR, city)
        │
        ▼
-Flask API  ──►  weather_data.py  ──►  Weather API (Open-Meteo / IQAir / fallback)
+Gradio UI  ──►  weather_data.py  ──►  Weather API (Open-Meteo / IQAir / fallback)
        │                                      │
        │                                      ▼
        │                              Temperature, Humidity, PM2.5, PM10
@@ -84,7 +84,15 @@ Flask API  ──►  weather_data.py  ──►  Weather API (Open-Meteo / IQAi
 
 ---
 
-## Installation
+## Web Interface
+
+The app is built with **Gradio** and is deployed live on Hugging Face Spaces:
+
+🔗 **https://faris11z-asthma-risk-prediction.hf.space**
+
+Enter your city, personal details, and actual PEFR reading, then click **Analyze Risk**. The app fetches live weather/air-quality data and returns your predicted healthy PEFR, ratio, and risk zone.
+
+### Running locally
 
 ```bash
 git clone <repo-url>
@@ -95,48 +103,11 @@ python3 app.py
 
 Open **http://127.0.0.1:7860** in your browser.
 
----
+### Deployment notes
 
-## API
-
-### `POST /api/predict`
-
-```json
-{
-  "city": "chennai",
-  "age": "30",
-  "height": "170",
-  "gender": "1",
-  "smoking": "0",
-  "asthma": "0",
-  "actual_pefr": "500"
-}
-```
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "data": {
-    "city": "chennai",
-    "user": {
-      "age": 30, "height": 170, "gender": "Male",
-      "smoking": "No", "asthma_history": "No", "actual_pefr": 500
-    },
-    "environment": {
-      "temperature": 32.5, "humidity": 65, "pm25": 18.2, "pm10": 30.4
-    },
-    "result": {
-      "predicted_pefr": 540, "ratio": 92.6, "zone": "SAFE"
-    }
-  }
-}
-```
-
-### `GET /api/model-info`
-
-Returns dataset row count, feature names, target column, and training status.
+- **Run on HF Spaces (free, ZeroGPU):** the `@spaces.GPU` decorator on `predict()` satisfies HF's ZeroGPU startup scan even though the model is CPU-only.
+- **CI/CD:** GitHub Actions in `.github/workflows/` run tests on push (`ci.yml`) and deploy to HF Spaces (`deploy.yml`) via the `HF_TOKEN` secret.
+- **Model is serialised** in `PEFR_predictor.joblib`, so no retraining is needed at startup.
 
 ---
 
@@ -265,7 +236,7 @@ Room  ──►  PMS5003 (PM2.5/PM10)
        ──►  ESP32   (WiFi + MQTT)
                 │
                 ▼
-          MQTT Broker ──►  Flask Backend ──►  Database (SQLite/PostgreSQL)
+          MQTT Broker ──►  Backend ──►  Database (SQLite/PostgreSQL)
                                        │
                                        ▼
                                  Web Dashboard
