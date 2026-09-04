@@ -108,12 +108,5 @@ with gr.Blocks(title='Asthma Risk Prediction') as demo:
     Model: Random Forest Regressor | Trained on 5,000 records | Weather: Open-Meteo API
     ''')
 
-CUSTOM_CSS = '''
-.zone-badge { text-align: center; font-size: 2em; font-weight: bold; padding: 0.5em; }
-.zone-safe { color: #22c55e; }
-.zone-moderate { color: #f59e0b; }
-.zone-risk { color: #ef4444; }
-'''
-
 if __name__ == '__main__':
-    demo.launch(server_name='0.0.0.0', server_port=7860, theme=gr.themes.Soft(), css=CUSTOM_CSS)
+    demo.launch()
