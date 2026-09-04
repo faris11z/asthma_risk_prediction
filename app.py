@@ -109,4 +109,4 @@ with gr.Blocks(title='Asthma Risk Prediction') as demo:
     ''')
 
 if __name__ == '__main__':
-    demo.launch()
+    demo.launch(ssr_mode=False)
