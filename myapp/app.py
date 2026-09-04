@@ -1,19 +1,32 @@
-import os
-from flask import Flask, request, jsonify, render_template
+import gradio as gr
 from weather_data import get_weather
 from model_training import predict_pefr, get_model_info
 
-app = Flask(__name__, template_folder='templates')
+CITIES = [
+    'chennai', 'coimbatore', 'madurai', 'tiruchirappalli', 'salem',
+    'tirunelveli', 'tiruppur', 'erode', 'vellore', 'thoothukudi',
+    'dindigul', 'thanjavur', 'ranipet', 'sivakasi', 'karur',
+    'ooty', 'hosur', 'nagercoil', 'kumbakonam', 'cuddalore',
+    'kanyakumari', 'ambur', 'nagapattinam', 'bengaluru', 'bangalore',
+    'hyderabad', 'mumbai', 'pune', 'delhi', 'kolkata',
+    'ahmedabad', 'jaipur', 'lucknow', 'surat',
+    'london', 'new york', 'tokyo', 'paris', 'berlin',
+    'sydney', 'dubai', 'singapore', 'bangkok', 'kuala lumpur',
+    'dhaka', 'colombo', 'kathmandu', 'moscow', 'beijing',
+    'seoul', 'cairo', 'istanbul', 'rio de janeiro', 'cape town',
+    'los angeles', 'chicago', 'toronto', 'melbourne', 'hong kong',
+    'ho chi minh', 'jakarta', 'manila', 'karachi', 'lagos', 'nairobi',
+]
 
-def _build_result(data, temp, hum, pm2, pm10, predicted_pefr):
-    city = data['city'].strip().lower()
-    age = int(data['age'])
-    height = int(data['height'])
-    gender = int(data['gender'])
-    smoking = int(data['smoking'])
-    asthma = int(data['asthma'])
-    actual_pefr = float(data['actual_pefr'])
 
+def predict(city, age, height, gender, smoking, asthma, actual_pefr):
+    city = city.strip().lower()
+    if not city:
+        return 'Enter a city', '', '', '', '', '', '', ''
+
+    temp, hum, pm2, pm10 = get_weather(city)
+    features = [age, height, gender, smoking, asthma, temp, hum, pm2, pm10]
+    predicted_pefr = predict_pefr(features)
     ratio = (actual_pefr / predicted_pefr) * 100
 
     if ratio >= 80:
@@ -23,88 +36,84 @@ def _build_result(data, temp, hum, pm2, pm10, predicted_pefr):
     else:
         zone = 'RISK'
 
-    return {
-        'city': city,
-        'user': {
-            'age': age,
-            'height': height,
-            'gender': 'Male' if gender == 1 else 'Female',
-            'smoking': 'Yes' if smoking else 'No',
-            'asthma_history': 'Yes' if asthma else 'No',
-            'actual_pefr': actual_pefr,
-        },
-        'environment': {
-            'temperature': temp,
-            'humidity': hum,
-            'pm25': pm2,
-            'pm10': pm10,
-        },
-        'result': {
-            'predicted_pefr': round(predicted_pefr),
-            'ratio': round(ratio, 1),
-            'zone': zone,
-        }
-    }
+    info = get_model_info()
+    gender_label = 'Male' if gender == 1 else 'Female'
+    smoking_label = 'Yes' if smoking else 'No'
+    asthma_label = 'Yes' if asthma else 'No'
 
-@app.route('/')
-def home():
-    return render_template('index.html')
+    summary = (
+        f'**Zone:** {zone}\n\n'
+        f'| Metric | Value |\n|---|---|\n'
+        f'| Predicted PEFR | {round(predicted_pefr)} L/min |\n'
+        f'| Your Actual PEFR | {actual_pefr} L/min |\n'
+        f'| PEFR Ratio | {round(ratio, 1)}% |\n'
+        f'| Age | {age} years |\n'
+        f'| Height | {height} cm |\n'
+        f'| Gender | {gender_label} |\n'
+        f'| Smoking | {smoking_label} |\n'
+        f'| Asthma History | {asthma_label} |\n'
+    )
 
-@app.route('/api/predict', methods=['POST'])
-def api_predict():
-    body = request.get_json()
-    if not body:
-        return jsonify({'error': 'Request body is required'}), 400
+    env = (
+        f'| Condition | Value |\n|---|---|\n'
+        f'| Temperature | {temp} °C |\n'
+        f'| Humidity | {hum}% |\n'
+        f'| PM 2.5 | {pm2} µg/m³ |\n'
+        f'| PM 10 | {pm10} µg/m³ |\n'
+    )
 
-    required = ['city', 'age', 'height', 'gender', 'smoking', 'asthma', 'actual_pefr']
-    for field in required:
-        if field not in body or (isinstance(body[field], str) and not body[field].strip()):
-            return jsonify({'error': f'{field} is required'}), 400
+    model_info = (
+        f'Model: {info["model"]} | '
+        f'Trained on {info["rows"]:,} records | '
+        f'{len(info["features"])} features'
+    )
 
-    try:
-        age = int(body['age'])
-        if age < 1 or age > 120:
-            raise ValueError
-    except ValueError:
-        return jsonify({'error': 'Age must be a number between 1 and 120'}), 400
+    return zone, summary, env, model_info
 
-    try:
-        height = int(body['height'])
-        if height < 100 or height > 250:
-            raise ValueError
-    except ValueError:
-        return jsonify({'error': 'Height must be a number between 100 and 250 cm'}), 400
 
-    if body['gender'] not in ('0', '1'):
-        return jsonify({'error': 'Gender must be 0 (Female) or 1 (Male)'}), 400
-    if body['smoking'] not in ('0', '1'):
-        return jsonify({'error': 'Smoking must be 0 (No) or 1 (Yes)'}), 400
-    if body['asthma'] not in ('0', '1'):
-        return jsonify({'error': 'Asthma history must be 0 (No) or 1 (Yes)'}), 400
+with gr.Blocks(title='Asthma Risk Prediction') as demo:
+    gr.Markdown('''
+    # Asthma Risk Prediction 🫁
+    Assess your respiratory risk by comparing your actual Peak Expiratory Flow Rate (PEFR) against a machine-learning-predicted healthy baseline.
+    ''')
 
-    try:
-        pefr = float(body['actual_pefr'])
-        if pefr <= 0 or pefr > 1000:
-            raise ValueError
-    except ValueError:
-        return jsonify({'error': 'PEFR must be a positive number between 1 and 1000'}), 400
+    with gr.Row():
+        with gr.Column(scale=1):
+            gr.Markdown('### Personal Information')
+            city = gr.Textbox(label='City', placeholder='Type a city name...', value='chennai')
+            age = gr.Slider(12, 80, value=25, step=1, label='Age (years)')
+            height = gr.Slider(100, 250, value=170, step=1, label='Height (cm)')
+            gender = gr.Radio(choices=[('Male', 1), ('Female', 0)], label='Gender', value=1)
+            smoking = gr.Radio(choices=[('Non-Smoker', 0), ('Smoker', 1)], label='Smoking', value=0)
+            asthma = gr.Radio(choices=[('No', 0), ('Yes', 1)], label='Asthma History', value=0)
+            actual_pefr = gr.Slider(100, 700, value=450, step=5, label='Actual PEFR (L/min)')
+            predict_btn = gr.Button('Analyze Risk', variant='primary', size='lg')
 
-    try:
-        city = body['city'].strip().lower()
-        temp, hum, pm2, pm10 = get_weather(city)
-        features = [int(body['age']), int(body['height']), int(body['gender']),
-                    int(body['smoking']), int(body['asthma']), temp, hum, pm2, pm10]
-        predicted_pefr = predict_pefr(features)
-        result = _build_result(body, temp, hum, pm2, pm10, predicted_pefr)
-        return jsonify({'success': True, 'data': result})
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        with gr.Column(scale=1):
+            gr.Markdown('### Results')
+            zone_output = gr.Markdown('')
+            summary_output = gr.Markdown('')
+            gr.Markdown('### Environmental Conditions')
+            env_output = gr.Markdown('')
+            model_output = gr.Markdown('')
 
-@app.route('/api/model-info')
-def api_model_info():
-    return jsonify(get_model_info())
+    predict_btn.click(
+        fn=predict,
+        inputs=[city, age, height, gender, smoking, asthma, actual_pefr],
+        outputs=[zone_output, summary_output, env_output, model_output],
+    )
+
+    gr.Markdown('''
+    ---
+    Model: Random Forest Regressor | Trained on 5,000 records | Weather: Open-Meteo API
+    ''')
+
+CUSTOM_CSS = '''
+.zone-badge { text-align: center; font-size: 2em; font-weight: bold; padding: 0.5em; }
+.zone-safe { color: #22c55e; }
+.zone-moderate { color: #f59e0b; }
+.zone-risk { color: #ef4444; }
+'''
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    print(f'Starting server at http://127.0.0.1:{port}  (press Ctrl+C to stop)')
-    app.run(debug=True, host='0.0.0.0', port=port)
+    demo.launch(server_name='0.0.0.0', server_port=7860, theme=gr.themes.Soft(), css=CUSTOM_CSS)

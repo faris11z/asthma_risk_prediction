@@ -28,16 +28,6 @@ jobs:
       - name: Login to Hugging Face
         run: huggingface-cli login --token ${{ secrets.HF_TOKEN }}
 
-      - name: Create Space (if not exists)
-        run: |
-          huggingface-cli repo create \
-            --type space \
-            --space-sdk docker \
-            --private \
-            asthma-risk-prediction || true
-        env:
-          HF_HUB_ENABLE_HF_TRANSFER: "1"
-
       - name: Deploy to Hugging Face Spaces
         run: |
           python3 -c "
@@ -45,16 +35,22 @@ jobs:
           import os
 
           api = HfApi()
-          repo_id = os.environ.get('HF_USERNAME', '') + '/asthma-risk-prediction'
+          username = os.environ.get('HF_USERNAME', '')
+          repo_id = f'{username}/asthma-risk-prediction'
 
           # Create repo if it doesn't exist
           try:
-              api.create_repo(repo_id=repo_id, repo_type='space', space_sdk='docker', exist_ok=True)
+              api.create_repo(
+                  repo_id=repo_id,
+                  repo_type='space',
+                  space_sdk='gradio',
+                  exist_ok=True
+              )
               print(f'Space ready: {repo_id}')
           except Exception as e:
-              print(f'Repo creation note: {e}')
+              print(f'Repo note: {e}')
 
-          # Upload files (exclude .git, .github, __pycache__)
+          # Upload files (exclude .git, .github, __pycache__, Dockerfile)
           api.upload_folder(
               folder_path='.',
               repo_id=repo_id,
@@ -65,9 +61,11 @@ jobs:
                   '__pycache__/**',
                   '*.pyc',
                   'eval_plots/**',
+                  'Dockerfile',
+                  '.dockerignore',
               ],
           )
-          print(f'Deployed to https://{repo_id.replace(\"/\", \"-\")}.hf.space')
+          print(f'Deployed to https://{username}-asthma-risk-prediction.hf.space')
           "
         env:
           HF_USERNAME: ${{ secrets.HF_USERNAME }}

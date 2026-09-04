@@ -39,13 +39,10 @@ jobs:
           echo "All 3 plots verified"
         working-directory: myapp
 
-      - name: Smoke test Flask server
+      - name: Smoke test Gradio app
         run: |
           python3 app.py &
-          sleep 3
-          curl -sf -X POST http://127.0.0.1:5000/api/predict \
-            -H "Content-Type: application/json" \
-            -d '{"city":"chennai","age":"25","height":"170","gender":"1","smoking":"0","asthma":"0","actual_pefr":"450"}' \
-            | python3 -c "import sys,json; d=json.load(sys.stdin); assert d['success'], 'Prediction failed'; print('Smoke test PASSED:', d['data']['result']['zone'])"
+          sleep 5
+          curl -sf http://127.0.0.1:7860/ | grep -q "Asthma Risk Prediction" && echo "Smoke test PASSED" || (echo "Smoke test FAILED" && exit 1)
           kill %1
         working-directory: myapp

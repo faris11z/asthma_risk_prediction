@@ -3,9 +3,9 @@ title: Asthma Risk Prediction
 emoji: 🫁
 colorFrom: blue
 colorTo: green
-sdk: docker
-sdk_version: "24.0"
-app_port: 7860
+sdk: gradio
+sdk_version: "5.40.0"
+app_file: app.py
 pinned: false
 ---
 
