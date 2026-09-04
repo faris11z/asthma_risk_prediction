@@ -4,6 +4,6 @@ __pycache__
 *.pyc
 *.pyo
 eval_plots/
-myapp/templates/
-myapp/web/
-myapp/eval_plots/
+templates/
+web/
+asthma-*.jpg

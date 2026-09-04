@@ -45,8 +45,7 @@ A web-based application that predicts asthma risk by comparing your actual Peak 
 ## Architecture
 
 ```
-myapp/
-├── app.py                  # Flask web server & JSON API (orchestration)
+├── app.py                  # Gradio web interface (entry point)
 ├── weather_data.py         # Weather fetching only (Open-Meteo / IQAir / fallback)
 ├── model_training.py       # Random Forest training, caching, prediction helper
 ├── model_evaluation.py     # Metrics: holdout, 5-fold CV, subgroup errors
@@ -54,11 +53,12 @@ myapp/
 ├── evaluate.py             # Runnable: retrain + evaluate + visualize (python3 evaluate.py)
 ├── PEFR_Data_Set.csv       # Training dataset (5,000 rows)
 ├── PEFR_predictor.joblib   # Serialised trained model
-├── eval_plots/             # Generated evaluation charts
-├── templates/
-│   └── index.html          # Frontend (single-page app)
+├── requirements.txt        # Python dependencies
+├── templates/              # Legacy Flask frontend (no longer used by Gradio)
 ├── web/                    # Legacy v1.0 Eel-based frontend
-└── requirements.txt        # Python dependencies
+├── eval_plots/             # Generated evaluation charts
+├── Dockerfile              # Optional Docker build (for Render/self-host)
+└── .github/workflows/      # CI/CD pipelines
 ```
 
 ### Data flow
@@ -88,7 +88,7 @@ Flask API  ──►  weather_data.py  ──►  Weather API (Open-Meteo / IQAi
 
 ```bash
 git clone <repo-url>
-cd asthma_risk_prediction/myapp
+cd asthma_risk_prediction
 pip install -r requirements.txt
 python3 app.py
 ```
