@@ -25,18 +25,17 @@ jobs:
       - name: Install huggingface_hub
         run: pip install huggingface_hub
 
-      - name: Login to Hugging Face
-        run: huggingface-cli login --token ${{ secrets.HF_TOKEN }}
-
       - name: Deploy to Hugging Face Spaces
         run: |
           python3 -c "
           from huggingface_hub import HfApi
           import os
 
-          api = HfApi()
-          username = os.environ.get('HF_USERNAME', '')
+          token = os.environ['HF_TOKEN']
+          username = os.environ['HF_USERNAME']
           repo_id = f'{username}/asthma-risk-prediction'
+
+          api = HfApi(token=token)
 
           # Create repo if it doesn't exist
           try:
@@ -68,4 +67,5 @@ jobs:
           print(f'Deployed to https://{username}-asthma-risk-prediction.hf.space')
           "
         env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
           HF_USERNAME: ${{ secrets.HF_USERNAME }}

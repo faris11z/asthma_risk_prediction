@@ -11,7 +11,7 @@ pinned: false
 
 # Asthma Risk Prediction using Random Forest Regressor
 
-> **v2.0** — Major upgrade from the original Decision Tree Classifier project by Sulaiman Faris.
+> **v2.0** -- Major upgrade from the original Decision Tree Classifier project by Sulaiman Faris.
 
 A web-based application that predicts asthma risk by comparing your actual Peak Expiratory Flow Rate (PEFR) against a predicted healthy baseline for your demographic profile and current environmental conditions.
 
@@ -34,11 +34,11 @@ A web-based application that predicts asthma risk by comparing your actual Peak 
 
 ## Features
 
-- **Personal health profiling** — Age, Height, Gender, Smoking, Asthma history
-- **Live environmental data** — Real-time Temperature, Humidity, PM2.5, PM10 from Open-Meteo API
-- **ML-powered prediction** — Random Forest Regressor trained on 5,000 records
-- **Risk assessment** — SAFE / MODERATE / RISK zones based on PEFR ratio
-- **Responsive web UI** — Dark theme, field tooltips, city autocomplete, mobile-friendly
+- **Personal health profiling** -- Age, Height, Gender, Smoking, Asthma history
+- **Live environmental data** -- Real-time Temperature, Humidity, PM2.5, PM10 from Open-Meteo API
+- **ML-powered prediction** -- Random Forest Regressor trained on 5,000 records
+- **Risk assessment** -- SAFE / MODERATE / RISK zones based on PEFR ratio
+- **Responsive web UI** -- Dark theme, field tooltips, city autocomplete, mobile-friendly
 
 ---
 
@@ -93,7 +93,7 @@ pip install -r requirements.txt
 python3 app.py
 ```
 
-Open **http://127.0.0.1:5000** in your browser.
+Open **http://127.0.0.1:7860** in your browser.
 
 ---
 
@@ -143,11 +143,11 @@ Returns dataset row count, feature names, target column, and training status.
 ## Model
 
 - **Algorithm**: Random Forest Regressor (`sklearn.ensemble.RandomForestRegressor`)
-- **Why not Decision Tree?**: PEFR is a continuous value (regression), not a category. A classifier treats each unique PEFR as a class — conceptually wrong. Also, a single tree overfits; 100 trees in a forest generalise far better.
+- **Why not Decision Tree?**: PEFR is a continuous value (regression), not a category. A classifier treats each unique PEFR as a class -- conceptually wrong. Also, a single tree overfits; 100 trees in a forest generalise far better.
 - **Features**: Age, Height, Gender, Smoking, AsthmaHistory, Temperature, Humidity, PM2.5, PM10
 - **Target**: PEFR (Peak Expiratory Flow Rate in L/min)
 - **Training data**: 5,000 synthetically generated records based on standard respiratory physiology
-- **Hyperparameters**: tuned via `GridSearchCV` — `n_estimators=200`, `max_depth=10`, `min_samples_leaf=5`, `min_samples_split=2`
+- **Hyperparameters**: tuned via `GridSearchCV` -- `n_estimators=200`, `max_depth=10`, `min_samples_leaf=5`, `min_samples_split=2`
 - **Evaluation**: run `python3 evaluate.py` (retrains fresh, retunes hyperparameters, regenerates all reports & plots). Add `--fast` for a quick run with a smaller grid.
 
 ### Evaluation pipeline: train / validation / test split
@@ -175,8 +175,8 @@ Dataset (5,000)
 | MAE | 34.93 L/min | 34.00 ± 0.63 L/min |
 | RMSE | 44.32 L/min | 42.73 ± 0.90 L/min |
 | R² | 0.77 | 0.7786 ± 0.0119 |
-| MAPE | 7.19% | — |
-| Explained Variance | 0.77 | — |
+| MAPE | 7.19% | -- |
+| Explained Variance | 0.77 | -- |
 
 Overfitting check: validation MAE 33.73 vs CV-train MAE 34.02 → gap 0.29 L/min, no overfitting.
 
@@ -197,10 +197,10 @@ Overfitting check: validation MAE 33.73 vs CV-train MAE 34.02 → gap 0.29 L/min
 ### Key trends (from evaluation)
 
 - **Tuning paid off**: GridSearchCV (36 combos × 5 folds) improved CV MAE from 34.25 → 34.00 L/min (best: `max_depth=10`, 200 trees).
-- **Gender dominates** (68% importance) — expected, males average 580 vs 439 L/min for females in the dataset.
-- **Physiological factors** (Gender + Height + Age ≈ 84%) drive the prediction far more than environmental ones — consistent with medical literature where PEFR depends primarily on age, height and sex.
-- **Asthmatics are harder to predict**: MAE 40.3 vs 33.8 L/min for non-asthmatics — a larger asthmatic cohort would improve this.
-- **Mid-PEFR band is the hardest to predict** (MAE 38.5), while high-PEFR is easiest (30.8) — regression toward the mean in the middle range.
+- **Gender dominates** (68% importance) -- expected, males average 580 vs 439 L/min for females in the dataset.
+- **Physiological factors** (Gender + Height + Age ≈ 84%) drive the prediction far more than environmental ones -- consistent with medical literature where PEFR depends primarily on age, height and sex.
+- **Asthmatics are harder to predict**: MAE 40.3 vs 33.8 L/min for non-asthmatics -- a larger asthmatic cohort would improve this.
+- **Mid-PEFR band is the hardest to predict** (MAE 38.5), while high-PEFR is easiest (30.8) -- regression toward the mean in the middle range.
 - **Mean residual ≈ −1.1 L/min** → essentially zero systematic bias; errors are random.
 
 ### Visualizations (`eval_plots/`)
@@ -223,9 +223,9 @@ The synthetic dataset was generated using standard respiratory physiology:
 
 ### Weather data sources
 
-1. **Open-Meteo** (primary) — Free API, no key required. Global coverage. Provides temperature, humidity, PM2.5, PM10.
-2. **IQAir** (fallback) — Scraped from IQAir city pages.
-3. **Generative fallback** — City-name-seeded realistic defaults if both APIs fail.
+1. **Open-Meteo** (primary) -- Free API, no key required. Global coverage. Provides temperature, humidity, PM2.5, PM10.
+2. **IQAir** (fallback) -- Scraped from IQAir city pages.
+3. **Generative fallback** -- City-name-seeded realistic defaults if both APIs fail.
 
 ---
 
@@ -241,7 +241,7 @@ The synthetic dataset was generated using standard respiratory physiology:
 
 ## Future Work: Room-Level Monitoring
 
-The current system operates at **city level** — it fetches ambient AQI and weather data for the entered city. This is a coarse approximation because:
+The current system operates at **city level** -- it fetches ambient AQI and weather data for the entered city. This is a coarse approximation because:
 
 - Indoor air quality can differ dramatically from outdoor readings
 - Individual rooms have unique PM, humidity, and temperature profiles
